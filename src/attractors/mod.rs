@@ -1,4 +1,5 @@
 pub mod clifford;
+pub mod henon;
 
 pub trait Attractor<T, const N: usize> {
     fn step(&mut self);
