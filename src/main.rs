@@ -1,13 +1,12 @@
 use std::time::{Duration, Instant};
 
 use indicatif::ProgressBar;
-use rand_distr::{Distribution, Normal};
-use strange_attractor::attractors::{clifford::CliffordAttractor, Attractor};
+use strange_attractor::attractors::{ikeda::IkedaAttractor, Attractor};
 
 mod canvas;
 use canvas::{HitCanvas, PositionCalculator};
 
-fn calculate_bounds(attractor: &mut CliffordAttractor<f64>) -> (f64, f64, f64, f64) {
+fn calculate_bounds<A: Attractor<f64, 2> + Clone>(mut attractor: A) -> (f64, f64, f64, f64) {
     let duration = Duration::from_secs(1);
     let start = Instant::now();
 
@@ -37,8 +36,8 @@ fn calculate_bounds(attractor: &mut CliffordAttractor<f64>) -> (f64, f64, f64, f
 }
 
 fn main() {
-    let attractor = CliffordAttractor::<f64>::new([1.0, 1.0], -1.7, 1.3, -0.1, -1.2);
-    let (x_min, x_max, y_min, y_max) = calculate_bounds(&mut attractor.clone());
+    let attractor = IkedaAttractor::<f64>::new([0.0, 0.0], 0.8);
+    let (x_min, x_max, y_min, y_max) = calculate_bounds(attractor.clone());
 
     let mut attractor = attractor;
 
@@ -48,11 +47,9 @@ fn main() {
     let mut canvas = HitCanvas::new(pos_calc);
 
     let steps = 100_000u64;
-    let iterations = 10_000_000_000u64;
+    let iterations = 1_000_000_000u64;
     let iterations_per_step = iterations / steps;
     let progress = ProgressBar::new(steps);
-
-    let normal = Normal::new(0.0, 0.05).unwrap();
 
     for i in 0..iterations {
         attractor.step();
@@ -62,11 +59,6 @@ fn main() {
 
         if i % iterations_per_step == 0 {
             progress.inc(1);
-        }
-
-        if i % 1_000 == 0 {
-            attractor.point[0] += normal.sample(&mut rand::rng());
-            attractor.point[1] += normal.sample(&mut rand::rng());
         }
     }
 
