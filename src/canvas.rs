@@ -1,6 +1,7 @@
-use image::GrayImage;
-use image::Luma;
+use image::{ImageBuffer, Luma};
 use num_traits::{Float, ToPrimitive};
+
+pub type GrayImage16 = ImageBuffer<Luma<u16>, Vec<u16>>;
 
 pub struct PositionCalculator<F> {
     x_min: F,
@@ -111,17 +112,17 @@ impl<F: Float + ToPrimitive> HitCanvas<F> {
         self.counts[row * self.width() + col]
     }
 
-    pub fn to_gray_image(&self) -> GrayImage {
+    pub fn to_gray_image_16(&self) -> GrayImage16 {
         let width = self.width();
         let height = self.height();
         let max_count = self.max_count();
 
-        let mut img = GrayImage::new(width as u32, height as u32);
+        let mut img = GrayImage16::new(width as u32, height as u32);
 
         for row in 0..height {
             for col in 0..width {
                 let count = self.count_at(row, col);
-                let value = log_scale_count(count, max_count);
+                let value = log_scale_count_u16(count, max_count);
 
                 img.put_pixel(col as u32, row as u32, Luma([value]));
             }
@@ -131,11 +132,12 @@ impl<F: Float + ToPrimitive> HitCanvas<F> {
     }
 }
 
-fn log_scale_count(count: u32, max_count: u32) -> u8 {
-    if count == 0 {
+fn log_scale_count_u16(count: u32, max_count: u32) -> u16 {
+    if max_count == 0 {
         return 0;
     }
 
-    let scaled = ((count as f64 + 1.0).ln() / (max_count as f64 + 1.0).ln()) * 255.0;
-    scaled as u8
+    let scaled = ((count as f64 + 1.0).ln() / (max_count as f64 + 1.0).ln()) * u16::MAX as f64;
+
+    scaled.round() as u16
 }
