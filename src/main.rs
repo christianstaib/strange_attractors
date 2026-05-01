@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    path::{Path, PathBuf},
+    time::{Duration, Instant},
+};
 
 use clap::Parser;
 use indicatif::ProgressBar;
@@ -24,6 +27,10 @@ struct Args {
     /// Number of iterations to compute
     #[arg(short, long, default_value = "1000000000")]
     iterations: u64,
+
+    /// Output image path
+    #[arg(short, long, default_value = "attractor.png")]
+    output: PathBuf,
 }
 
 fn calculate_bounds<A: Attractor<f64, 2> + Clone>(mut attractor: A) -> (f64, f64, f64, f64) {
@@ -63,16 +70,19 @@ fn main() {
             CliffordAttractor::<f64>::new([1.0, 1.0], -1.7, 1.3, -0.1, -1.2),
             args.pixels_per_unit,
             args.iterations,
+            &args.output,
         ),
         "henon" => run_2d_attractor(
             HenonAttractor::<f64>::new([0.0, 0.0], 1.4, 0.3),
             args.pixels_per_unit,
             args.iterations,
+            &args.output,
         ),
         "ikeda" => run_2d_attractor(
             IkedaAttractor::<f64>::new([0.0, 0.0], 0.8),
             args.pixels_per_unit,
             args.iterations,
+            &args.output,
         ),
         _ => eprintln!("Unknown attractor type: {}", args.attractor),
     }
@@ -82,6 +92,7 @@ fn run_2d_attractor<A: Attractor<f64, 2> + Clone>(
     attractor: A,
     pixels_per_unit: f64,
     iterations: u64,
+    output_path: &Path,
 ) {
     let (x_min, x_max, y_min, y_max) = calculate_bounds(attractor.clone());
 
@@ -109,6 +120,6 @@ fn run_2d_attractor<A: Attractor<f64, 2> + Clone>(
 
     // save as PNG
     let img = canvas.to_gray_image_16();
-    img.save("attractor.png").unwrap();
-    println!("Saved attractor image to attractor.png");
+    img.save(output_path).unwrap();
+    println!("Saved attractor image to {}", output_path.display());
 }
