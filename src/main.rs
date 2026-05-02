@@ -3,10 +3,11 @@ use std::{
     time::{Duration, Instant},
 };
 
-use clap::Parser;
+use clap::{Args as ClapArgs, Parser, Subcommand};
 use indicatif::ProgressBar;
 use strange_attractor::attractors::{
-    clifford::CliffordAttractor, henon::HenonAttractor, ikeda::IkedaAttractor, Attractor,
+    clifford::CliffordAttractor, henon::HenonAttractor, ikeda::IkedaAttractor,
+    lorenz::LorenzAttractor, Attractor,
 };
 
 mod canvas;
@@ -15,22 +16,98 @@ use canvas::{HitCanvas, PositionCalculator};
 #[derive(Parser, Debug)]
 #[command(name = "Strange Attractor")]
 #[command(about = "Generate beautiful strange attractor visualizations", long_about = None)]
-struct Args {
-    /// Type of attractor: clifford, henon, ikeda, or lorenz
-    #[arg(value_parser = ["clifford", "henon", "ikeda", "lorenz"])]
-    attractor: String,
-
+struct Cli {
     /// Pixels per unit (higher = more detail)
-    #[arg(short, long, default_value = "10000")]
+    #[arg(short, long, default_value_t = 10000.0, global = true)]
     pixels_per_unit: f64,
 
     /// Number of iterations to compute
-    #[arg(short, long, default_value = "1000000000")]
+    #[arg(short, long, default_value_t = 1_000_000_000, global = true)]
     iterations: u64,
 
     /// Output image path
-    #[arg(short, long, default_value = "attractor.png")]
+    #[arg(short, long, default_value = "attractor.png", global = true)]
     output: PathBuf,
+
+    #[command(subcommand)]
+    attractor: AttractorCommand,
+}
+
+#[derive(Subcommand, Debug)]
+enum AttractorCommand {
+    Clifford(CliffordArgs),
+    Henon(HenonArgs),
+    Ikeda(IkedaArgs),
+    Lorenz(LorenzArgs),
+}
+
+#[derive(ClapArgs, Debug)]
+struct CliffordArgs {
+    #[arg(long, default_value_t = 1.0, allow_negative_numbers = true)]
+    x: f64,
+
+    #[arg(long, default_value_t = 1.0, allow_negative_numbers = true)]
+    y: f64,
+
+    #[arg(long, default_value_t = -1.7, allow_negative_numbers = true)]
+    a: f64,
+
+    #[arg(long, default_value_t = 1.3, allow_negative_numbers = true)]
+    b: f64,
+
+    #[arg(long, default_value_t = -0.1, allow_negative_numbers = true)]
+    c: f64,
+
+    #[arg(long, default_value_t = -1.2, allow_negative_numbers = true)]
+    d: f64,
+}
+
+#[derive(ClapArgs, Debug)]
+struct HenonArgs {
+    #[arg(long, default_value_t = 0.0, allow_negative_numbers = true)]
+    x: f64,
+
+    #[arg(long, default_value_t = 0.0, allow_negative_numbers = true)]
+    y: f64,
+
+    #[arg(long, default_value_t = 1.4, allow_negative_numbers = true)]
+    a: f64,
+
+    #[arg(long, default_value_t = 0.3, allow_negative_numbers = true)]
+    b: f64,
+}
+
+#[derive(ClapArgs, Debug)]
+struct IkedaArgs {
+    #[arg(long, default_value_t = 0.0, allow_negative_numbers = true)]
+    x: f64,
+
+    #[arg(long, default_value_t = 0.0, allow_negative_numbers = true)]
+    y: f64,
+
+    #[arg(long, default_value_t = 0.8, allow_negative_numbers = true)]
+    u: f64,
+}
+
+#[derive(ClapArgs, Debug)]
+struct LorenzArgs {
+    #[arg(long, default_value_t = 1.0, allow_negative_numbers = true)]
+    x: f64,
+
+    #[arg(long, default_value_t = 1.0, allow_negative_numbers = true)]
+    y: f64,
+
+    #[arg(long, default_value_t = 1.0, allow_negative_numbers = true)]
+    z: f64,
+
+    #[arg(long, default_value_t = 10.0, allow_negative_numbers = true)]
+    sigma: f64,
+
+    #[arg(long, default_value_t = 28.0, allow_negative_numbers = true)]
+    rho: f64,
+
+    #[arg(long, default_value_t = 2.6667, allow_negative_numbers = true)]
+    beta: f64,
 }
 
 fn calculate_bounds<A: Attractor<f64, 2> + Clone>(mut attractor: A) -> (f64, f64, f64, f64) {
@@ -63,28 +140,44 @@ fn calculate_bounds<A: Attractor<f64, 2> + Clone>(mut attractor: A) -> (f64, f64
 }
 
 fn main() {
-    let args = Args::parse();
+    let args = Cli::parse();
 
-    match args.attractor.as_str() {
-        "clifford" => run_2d_attractor(
-            CliffordAttractor::<f64>::new([1.0, 1.0], -1.7, 1.3, -0.1, -1.2),
+    match args.attractor {
+        AttractorCommand::Clifford(config) => run_2d_attractor(
+            CliffordAttractor::<f64>::new(
+                [config.x, config.y],
+                config.a,
+                config.b,
+                config.c,
+                config.d,
+            ),
             args.pixels_per_unit,
             args.iterations,
             &args.output,
         ),
-        "henon" => run_2d_attractor(
-            HenonAttractor::<f64>::new([0.0, 0.0], 1.4, 0.3),
+        AttractorCommand::Henon(config) => run_2d_attractor(
+            HenonAttractor::<f64>::new([config.x, config.y], config.a, config.b),
             args.pixels_per_unit,
             args.iterations,
             &args.output,
         ),
-        "ikeda" => run_2d_attractor(
-            IkedaAttractor::<f64>::new([0.0, 0.0], 0.8),
+        AttractorCommand::Ikeda(config) => run_2d_attractor(
+            IkedaAttractor::<f64>::new([config.x, config.y], config.u),
             args.pixels_per_unit,
             args.iterations,
             &args.output,
         ),
-        _ => eprintln!("Unknown attractor type: {}", args.attractor),
+        AttractorCommand::Lorenz(config) => run_2d_attractor(
+            LorenzAttractor::<f64>::new(
+                [config.x, config.y, config.z],
+                config.sigma,
+                config.rho,
+                config.beta,
+            ),
+            args.pixels_per_unit,
+            args.iterations,
+            &args.output,
+        ),
     }
 }
 
@@ -101,9 +194,8 @@ fn run_2d_attractor<A: Attractor<f64, 2> + Clone>(
     let pos_calc = PositionCalculator::new(x_min, x_max, y_min, y_max, pixels_per_unit);
     let mut canvas = HitCanvas::new(pos_calc);
 
-    let steps = 100_000u64;
-    let iterations_per_step = iterations / steps;
-    let progress = ProgressBar::new(steps);
+    let progress_update_interval = (iterations / 100_000).max(1);
+    let progress = ProgressBar::new(iterations);
 
     for i in 0..iterations {
         attractor.step();
@@ -111,11 +203,12 @@ fn run_2d_attractor<A: Attractor<f64, 2> + Clone>(
         let point = attractor.get();
         canvas.record(&point);
 
-        if i % iterations_per_step == 0 {
-            progress.inc(1);
+        if i % progress_update_interval == 0 {
+            progress.set_position(i);
         }
     }
 
+    progress.set_position(iterations);
     progress.finish();
 
     // save as PNG

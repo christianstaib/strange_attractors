@@ -1,5 +1,7 @@
 use num_traits::Float;
 
+use crate::attractors::Attractor;
+
 #[derive(Clone, Copy)]
 pub struct LorenzAttractor<T> {
     pub point: [T; 3],
@@ -45,5 +47,15 @@ impl<T: Float> LorenzAttractor<T> {
 
     pub fn get_2d(&self) -> [T; 2] {
         [self.point[0], self.point[1]]
+    }
+}
+
+impl<T: Float> Attractor<T, 2> for LorenzAttractor<T> {
+    fn step(&mut self) {
+        LorenzAttractor::step(self);
+    }
+
+    fn get(&self) -> [T; 2] {
+        self.get_2d()
     }
 }

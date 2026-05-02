@@ -23,10 +23,7 @@ impl<T: Float> Attractor<T, 2> for HenonAttractor<T> {
         let a = self.a;
         let b = self.b;
 
-        self.point = [
-            T::one() - a * x * x + y,
-            b * x,
-        ];
+        self.point = [T::one() - a * x * x + y, b * x];
     }
 
     fn get(&self) -> [T; 2] {
